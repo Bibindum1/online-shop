@@ -1,0 +1,104 @@
+{% extends 'catalog/index.html' %}
+{% block title %}{{ product.name }} - Детали{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- НАВИГАЦИЯ -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <a href="{% url 'catalog:product_list' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+        <h2>📦 {{ product.name }}</h2>
+        <a href="{% url 'catalog:product_update' product.pk %}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> Редактировать
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- ГАЛЕРЕЯ ИЗОБРАЖЕНИЙ -->
+        <div class="col-lg-7">
+            <div id="galleryCarousel" class="carousel slide shadow" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    {% for img in gallery %}
+                    <div class="carousel-item {% if img.is_main or forloop.first %}active{% endif %}">
+                        <img src="{{ img.image.url }}" class="d-block w-100"
+                             style="height: 450px; object-fit: cover;"
+                             alt="{{ img.alt_text|default:product.name }}">
+                    </div>
+                    {% empty %}
+                    <div class="carousel-item active">
+                        <div class="bg-light p-5 text-center rounded" style="height: 450px;">
+                            <i class="bi bi-image fa-5x text-muted"></i>
+                            <p class="text-muted mt-3">Галерея пуста</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if gallery|length > 1 %}
+                <button class="carousel-control-prev" type="button" data-bs-target="#galleryCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#galleryCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon"></span>
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- ТУМБЫ ГАЛЕРЕИ -->
+            {% if gallery|length > 1 %}
+            <div class="row mt-3 g-2">
+                {% for img in gallery %}
+                <div class="col-3">
+                    <img src="{{ img.image.url }}" class="img-thumbnail cursor-pointer rounded shadow-sm"
+                         style="height: 80px; object-fit: cover; cursor: pointer;"
+                         onclick="changeSlide({{ forloop.counter0 }})"
+                         alt="{{ img.alt_text|default:'Галерея' }}">
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ИНФОРМАЦИЯ -->
+        <div class="col-lg-5">
+            <div class="card shadow h-100">
+                <div class="card-body">
+                    <h4 class="card-title">{{ product.name }}</h4>
+
+                    <table class="table table-borderless mb-4">
+                        <tr><td width="120"><strong>Артикул:</strong></td><td>{{ product.article|default:"—" }}</td></tr>
+                        <tr><td><strong>Категория:</strong></td><td>{{ product.category.name }}</td></tr>
+                        <tr><td><strong>Цена:</strong></td><td><strong class="text-success h4">{{ product.price|floatformat:2 }} ₽</strong></td></tr>
+                        <tr><td><strong>Склад:</strong></td>
+                            <td>{% if product.stock > 0 %}<span class="badge bg-success fs-6">{{ product.stock }} шт.</span>{% else %}<span class="badge bg-danger fs-6">Нет в наличии</span>{% endif %}</td>
+                        </tr>
+                        <tr><td><strong>Статус:</strong></td>
+                            <td>{% if product.is_active %}<span class="badge bg-success fs-6">Активен</span>{% else %}<span class="badge bg-warning text-dark fs-6">Неактивен</span>{% endif %}</td>
+                        </tr>
+                    </table>
+
+                    {% if product.description %}
+                    <div class="mb-4">
+                        <h6><i class="bi bi-card-text"></i> Описание</h6>
+                        <p>{{ product.description|linebreaks }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="row text-muted small">
+                        <div class="col-6">Создан: {{ product.created_at|date:"d.m.Y H:i" }}</div>
+                        <div class="col-6">Обновлен: {{ product.updated_at|date:"d.m.Y H:i" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function changeSlide(index) {
+    const carousel = new bootstrap.Carousel(document.getElementById('galleryCarousel'));
+    carousel.to(index);
+}
+</script>
+{% endblock %}

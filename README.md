@@ -1,4 +1,4 @@
-# Internet-shop Сирота/Майоров
+# Internet-shop Слугинов/Майоров
 
 Онлайн-магазин на Django для изучения GitFlow и командной разработки.
 
@@ -21,8 +21,8 @@
 ### 1. Клонировать репозиторий
 
 bash
-git clone https://github.com/your-username/django-shop-фамилия.git
-cd django-shop-фамилия
+git clone https://github.com/Bibindum1/online-shop
+cd internet-shop1
 git checkout develop
 
 2. Установить зависимости
@@ -49,7 +49,7 @@ poetry run python manage.py <command>
 poetry shell
 
 Автор
-Дмитрий/Илья
+Александр/Илья
 
 Лицензия
 MIT License

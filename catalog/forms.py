@@ -1,30 +1,60 @@
 from django import forms
 from django.forms import ModelForm
 from django.core.exceptions import ValidationError
+from django.utils.text import slugify
 from .models import Category, Product
 
 
-class BaseForm:
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.apply_styles()
-
-
-class CategoryForm(BaseForm, ModelForm):
-
+class BaseProductMixin:
     class Meta:
-        model = Category
-        fields = ['name', 'description', 'is_active']
-        labels = {
-            'name': 'Название категории',
-            'description': 'Описание',
-            'is_active': 'Активна'
-        }
-        help_texts = {
-            'name': 'Макс. 200 символов',
-            'description': 'Необязательное поле'
-        }
+        abstract = True
+
+    def __init__(self):
+        self.fields = None
+
+    def apply_styles(self):
+        self.fields['name'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Название товара',
+            'maxlength': 255,
+            'required': True
+        })
+        self.fields['category'].widget.attrs.update({
+            'class': 'form-select',
+            'required': True
+        })
+        self.fields['description'].widget.attrs.update({
+            'class': 'form-control',
+            'rows': 5,
+            'placeholder': 'Подробное описание товара...'
+        })
+        self.fields['price'].widget.attrs.update({
+            'class': 'form-control',
+            'type': 'number',
+            'step': '0.01',
+            'min': '0.01',
+            'placeholder': '0.00',
+            'required': True
+        })
+        self.fields['stock'].widget.attrs.update({
+            'class': 'form-control',
+            'type': 'number',
+            'min': '0',
+            'placeholder': '0',
+            'required': True
+        })
+        self.fields['is_active'].widget.attrs.update({
+            'class': 'form-check-input'
+        })
+        self.fields['image'].widget.attrs.update({
+            'class': 'form-control',
+            'accept': 'image/*'
+        })
+
+
+class BaseCategoryMixin:
+    class Meta:
+        abstract = True
 
     def apply_styles(self):
         self.fields['name'].widget.attrs.update({
@@ -42,22 +72,34 @@ class CategoryForm(BaseForm, ModelForm):
             'class': 'form-check-input'
         })
 
+
+class CategoryForm(ModelForm, BaseCategoryMixin):
+
+    class Meta:
+        model = Category
+        fields = ['name', 'description', 'is_active']
+        labels = {
+            'name': 'Название категории',
+            'description': 'Описание',
+            'is_active': 'Активна'
+        }
+        help_texts = {
+            'name': 'Макс. 200 символов',
+            'description': 'Необязательное поле'
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.apply_styles()
+
     def clean_name(self):
         name = self.cleaned_data['name']
         if Category.objects.filter(name__iexact=name).exclude(pk=self.instance.pk).exists():
             raise ValidationError('Категория с таким названием уже существует')
         return name.strip()
 
-    def clean(self):
-        cleaned_data = super().clean()
-        name = cleaned_data.get('name')
-        if name and not self.instance.slug:
-            from django.utils.text import slugify
-            cleaned_data['slug'] = slugify(name)[:200]
-        return cleaned_data
 
-
-class ProductForm(BaseForm, ModelForm):
+class ProductForm(ModelForm, BaseProductMixin):
 
     class Meta:
         model = Product
@@ -77,57 +119,12 @@ class ProductForm(BaseForm, ModelForm):
             'image': 'Рекомендуемый размер: 800x800px, JPG/PNG'
         }
 
-    def apply_styles(self):
-        self.fields['name'].widget.attrs.update({
-            'class': 'form-control',
-            'placeholder': 'Название товара',
-            'maxlength': 255,
-            'required': True
-        })
-
-        self.fields['category'].widget.attrs.update({
-            'class': 'form-select',
-            'required': True
-        })
-
-        self.fields['description'].widget.attrs.update({
-            'class': 'form-control',
-            'rows': 5,
-            'placeholder': 'Подробное описание товара...'
-        })
-
-        self.fields['price'].widget.attrs.update({
-            'class': 'form-control',
-            'type': 'number',
-            'step': '0.01',
-            'min': '0.01',
-            'placeholder': '0.00',
-            'required': True
-        })
-
-        self.fields['stock'].widget.attrs.update({
-            'class': 'form-control',
-            'type': 'number',
-            'min': '0',
-            'placeholder': '0',
-            'required': True
-        })
-
-        self.fields['is_active'].widget.attrs.update({
-            'class': 'form-check-input'
-        })
-
-        self.fields['image'].widget.attrs.update({
-            'class': 'form-control',
-            'accept': 'image/*'
-        })
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.apply_styles()
         self.fields['category'].queryset = Category.objects.filter(is_active=True)
-        if self.instance.pk:
-            self.fields['category'].queryset = self.fields['category'].queryset | Category.objects.filter(
-                pk=self.instance.category.pk)
+        if self.instance.pk and self.instance.category:
+            self.fields['category'].queryset |= Category.objects.filter(pk=self.instance.category.pk)
 
     def clean_name(self):
         name = self.cleaned_data['name']
@@ -150,19 +147,14 @@ class ProductForm(BaseForm, ModelForm):
     def clean_image(self):
         image = self.cleaned_data.get('image')
         if image:
-            if image.size > 5 * 1024 * 1024:
+            if hasattr(image, 'content_type'):
+                if image.size > 5 * 1024 * 1024:
+                    raise ValidationError('Размер изображения не должен превышать 5MB')
+                if not image.content_type.startswith('image/'):
+                    raise ValidationError('Файл должен быть изображением')
+            elif hasattr(image, 'size') and image.size > 5 * 1024 * 1024:
                 raise ValidationError('Размер изображения не должен превышать 5MB')
-            if not image.content_type.startswith('image/'):
-                raise ValidationError('Файл должен быть изображением')
         return image
-
-    def clean(self):
-        cleaned_data = super().clean()
-        name = cleaned_data.get('name')
-        if name and not self.instance.slug:
-            from django.utils.text import slugify
-            cleaned_data['slug'] = slugify(name)[:255]
-        return cleaned_data
 
 class ProductSearchForm(forms.Form):
     query = forms.CharField(
@@ -178,7 +170,35 @@ class ProductSearchForm(forms.Form):
 
 class CategoryBulkDeleteForm(forms.Form):
     category_ids = forms.ModelMultipleChoiceField(
-        queryset=Category.objects.all(),
+        queryset=Category.objects.filter(is_active=True),
         widget=forms.CheckboxSelectMultiple,
-        required=True
+        required=True,
+        label='Выберите категории для удаления'
+    )
+
+
+class ProductBulkDeleteForm(forms.Form):
+    product_ids = forms.ModelMultipleChoiceField(  
+        queryset=Product.objects.filter(is_active=True),
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label='Выберите товары для удаления'
+    )
+
+
+class ProductBulkUpdateForm(forms.Form):
+    product_ids = forms.ModelMultipleChoiceField( 
+        queryset=Product.objects.filter(is_active=True),
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label='Выберите товары для обновления'
+    )
+
+
+class CategoryBulkUpdateForm(forms.Form):
+    category_ids = forms.ModelMultipleChoiceField(
+        queryset=Category.objects.filter(is_active=True),
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label='Выберите категории для обновления'
     )

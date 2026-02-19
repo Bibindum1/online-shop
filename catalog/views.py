@@ -1,8 +1,11 @@
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q
 from django.core.paginator import Paginator
 from django.http import JsonResponse
+from django.views.generic import DetailView
+
 from .models import Category, Product
 from .forms import CategoryForm, ProductForm
 
@@ -124,7 +127,8 @@ def product_list(request):
         'query': query,
         'category_id': category_id,
         'sort': sort,
-        'total_count': products.count()
+        'total_count': products.count(),
+        'is_admin': request.user.is_superuser or request.user.groups.filter(name='admin').exists()
     }
     return render(request, 'catalog/products/list.html', context)
 
@@ -153,12 +157,12 @@ def product_update(request, pk):
 
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES, instance=product)
-        if form.is_valid():
+        if not form.is_valid():
+            messages.error(request, 'Исправьте ошибки в форме')
+        else:
             form.save()
             messages.success(request, 'Товар успешно обновлен')
             return redirect('catalog:product_list')
-        else:
-            messages.error(request, 'Исправьте ошибки в форме')
     else:
         form = ProductForm(instance=product)
 
@@ -194,3 +198,21 @@ def product_check_slug(request):
     slug = request.GET.get('slug', '')
     exists = Product.objects.filter(slug=slug).exists()
     return JsonResponse({'exists': exists})
+
+
+class ProductDetailAdminView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
+    model = Product
+    template_name = 'catalog/products/product_detail_admin.html'
+    context_object_name = 'product'
+
+    def test_func(self):
+        return (self.request.user.is_superuser or
+                self.request.user.is_staff or
+                self.request.user.groups.filter(name='admin').exists())
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['gallery'] = self.object.gallery.all()  # ← ГАЛЕРЕЯ!
+        context['main_image'] = self.object.gallery.filter(is_main=True).first()
+        context['is_admin'] = True
+        return context
