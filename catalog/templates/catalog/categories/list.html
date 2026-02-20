@@ -39,6 +39,93 @@
             </tr>
         </thead>
         <tbody>
+            <tbody id="categories-list" {% if is_admin %}class="sortable"{% endif %}>
+    {% for category in categories %}
+    <tr class="category-row{% if is_admin %} draggable{% endif %}"
+        {% if is_admin %}data-category-id="{{ category.id }}"{% endif %}>
+        <td><strong>{{ category.id }}</strong></td>
+        <td>{{ category.name }}</td>
+        <td><code>{{ category.slug|default:"—" }}</code></td>
+        <td>{{ category.description|truncatewords:8|default:"—" }}</td>
+        <td>
+            {% if category.is_active %}
+                <span class="badge bg-success">Активна</span>
+            {% else %}
+                <span class="badge bg-secondary">Неактивна</span>
+            {% endif %}
+        </td>
+        <td>{{ category.created_at|date:"d.m.Y H:i"|default:"—" }}</td>
+        <td>
+            <div class="btn-group">
+                <a href="{% url 'catalog:category_update' category.pk %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                <a href="{% url 'catalog:category_delete' category.pk %}"
+                   class="btn btn-sm btn-outline-danger"
+                   onclick="return confirm('Удалить {{ category.name }}?')">
+                    <i class="bi bi-trash"></i>
+                </a>
+            </div>
+        </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7" class="text-center py-4 text-muted">Категории не найдены</td></tr>
+    {% endfor %}
+            </tbody>
+
+        <tbody id="products-list" {% if is_admin %}class="sortable"{% endif %}>
+    {% for product in products %}
+    <tr class="product-row{% if is_admin %} draggable{% endif %}"
+        {% if is_admin %}data-product-id="{{ product.id }}"{% endif %}>
+        <td><strong>{{ product.id }}</strong></td>
+        <td>
+            {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}"
+                     style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+            {% endif %}
+            {{ product.name }}
+        </td>
+        <td>{{ product.category.name }}</td>
+        <td><code>{{ product.slug|default:"—" }}</code></td>
+        <td>{{ product.price }} ₽</td>
+        <td>
+            {% if product.stock > 0 %}
+                <span class="badge bg-success">{{ product.stock }}</span>
+            {% else %}
+                <span class="badge bg-danger">Нет в наличии</span>
+            {% endif %}
+        </td>
+        <td>
+            {% if product.is_active %}
+                <span class="badge bg-success">Активен</span>
+            {% else %}
+                <span class="badge bg-secondary">Неактивен</span>
+            {% endif %}
+        </td>
+        <td>{{ product.created_at|date:"d.m.Y H:i" }}</td>
+        <td>
+            {% if is_admin %}
+            <div class="btn-group">
+                <a href="{% url 'catalog:product_update' product.pk %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                <a href="{% url 'catalog:product_delete' product.pk %}"
+                   class="btn btn-sm btn-outline-danger"
+                   onclick="return confirm('Удалить {{ product.name }}?')">
+                    <i class="bi bi-trash"></i>
+                </a>
+                <a href="{% url 'catalog:product_detail_admin' product.pk %}" class="btn btn-sm btn-outline-info">
+                    <i class="bi bi-eye"></i>
+                </a>
+            </div>
+            {% endif %}
+        </td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="{% if is_admin %}9{% else %}8{% endif %}" class="text-center py-4 text-muted">Товары не найдены</td></tr>
+    {% endfor %}
+        </tbody>
+
             {% for category in categories %}
             <tr>
                 <td><strong>{{ category.id }}</strong></td>
@@ -72,4 +159,47 @@
         </tbody>
     </table>
 </div>
+    {% if is_admin %}
+<script src="{% load static %}{% static 'js/catalog-dragdrop.js' %}"></script>
+    <style>
+    .product-row.draggable:hover {
+    background-color: #f8f9fa;
+    transform: scale(1.01);
+}
+.product-row.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+.product-row.drag-over {
+    background-color: #e3f2fd !important;
+    border-left: 4px solid #2196f3;
+}
+</style>
+{% csrf_token %}
+{% endif %}
+
+    {% if is_admin %}
+    {% load static %}
+    <script src="{% static 'js/categories-dragdrop.js' %}"></script>
+    <style>
+    .category-row.draggable {
+        cursor: move;
+        transition: all 0.2s ease;
+    }
+    .category-row.draggable:hover {
+        background-color: #f8f9fa;
+        transform: scale(1.01);
+    }
+    .category-row.dragging {
+        opacity: 0.5;
+        transform: rotate(5deg);
+    }
+    .category-row.drag-over {
+        background-color: #e3f2fd !important;
+        border-left: 4px solid #2196f3;
+    }
+    </style>
+    {% csrf_token %}
+{% endif %}
+
 {% endblock %}

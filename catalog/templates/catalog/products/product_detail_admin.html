@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="container mt-4">
-    <!-- НАВИГАЦИЯ -->
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <a href="{% url 'catalog:product_list' %}" class="btn btn-secondary">
             <i class="bi bi-arrow-left"></i> Назад
@@ -15,7 +15,6 @@
     </div>
 
     <div class="row">
-        <!-- ГАЛЕРЕЯ ИЗОБРАЖЕНИЙ -->
         <div class="col-lg-7">
             <div id="galleryCarousel" class="carousel slide shadow" data-bs-ride="carousel">
                 <div class="carousel-inner">
@@ -45,7 +44,6 @@
                 {% endif %}
             </div>
 
-            <!-- ТУМБЫ ГАЛЕРЕИ -->
             {% if gallery|length > 1 %}
             <div class="row mt-3 g-2">
                 {% for img in gallery %}
@@ -60,7 +58,6 @@
             {% endif %}
         </div>
 
-        <!-- ИНФОРМАЦИЯ -->
         <div class="col-lg-5">
             <div class="card shadow h-100">
                 <div class="card-body">

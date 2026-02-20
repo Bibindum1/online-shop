@@ -13,11 +13,12 @@ class Category(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    position = models.PositiveIntegerField(default=0, blank=True)
 
     class Meta:
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
-        ordering = ['name']
+        ordering = ['position', 'name']
 
     def save(self, *args, **kwargs):
         if self.name and not self.slug:
@@ -43,11 +44,12 @@ class Product(models.Model):
     image = models.ImageField(upload_to=product_image_upload_path, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    position = models.PositiveIntegerField(default=0, blank=True)
 
     class Meta:
         verbose_name = 'Товар'
         verbose_name_plural = 'Товары'
-        ordering = ['name']
+        ordering = ['position', 'name']
 
     def save(self, *args, **kwargs):
         if self.name and not self.slug:

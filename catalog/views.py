@@ -5,6 +5,10 @@ from django.db.models import Q
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.views.generic import DetailView
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+import json
+from django.db import transaction
 
 from .models import Category, Product
 from .forms import CategoryForm, ProductForm
@@ -216,3 +220,42 @@ class ProductDetailAdminView(LoginRequiredMixin, UserPassesTestMixin, DetailView
         context['main_image'] = self.object.gallery.filter(is_main=True).first()
         context['is_admin'] = True
         return context
+
+
+@require_POST
+@csrf_exempt
+def reorder_products(request):
+    if not request.user.is_admin and not request.user.groups.filter(name='admin').exists():
+        return JsonResponse({'success': False, 'error': 'Нет прав доступа'})
+
+    try:
+        data = json.loads(request.body)
+        order = data.get('order', [])
+
+        with transaction.atomic():
+            for i, product_id in enumerate(order):
+                product = Product.objects.get(id=product_id)
+                product.position = i + 1
+                product.save(update_fields=['position'])
+
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+def reorder_categories(request):
+    if not request.user.is_admin and not request.user.groups.filter(name='admin').exists():
+        return JsonResponse({'success': False, 'error': 'Нет прав доступа'})
+
+    try:
+        data = json.loads(request.body)
+        order = data.get('order', [])
+
+        with transaction.atomic():
+            for i, category_id in enumerate(order):
+                category = Category.objects.get(id=category_id)
+                category.position = i + 1
+                category.save(update_fields=['position'])
+
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
