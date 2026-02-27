@@ -74,7 +74,6 @@ class BaseCategoryMixin:
 
 
 class CategoryForm(ModelForm, BaseCategoryMixin):
-
     class Meta:
         model = Category
         fields = ['name', 'description', 'is_active']
@@ -100,7 +99,6 @@ class CategoryForm(ModelForm, BaseCategoryMixin):
 
 
 class ProductForm(ModelForm, BaseProductMixin):
-
     class Meta:
         model = Product
         fields = ['name', 'category', 'description', 'price', 'stock', 'is_active', 'image']
@@ -156,6 +154,7 @@ class ProductForm(ModelForm, BaseProductMixin):
                 raise ValidationError('Размер изображения не должен превышать 5MB')
         return image
 
+
 class ProductSearchForm(forms.Form):
     query = forms.CharField(
         max_length=255,
@@ -178,7 +177,7 @@ class CategoryBulkDeleteForm(forms.Form):
 
 
 class ProductBulkDeleteForm(forms.Form):
-    product_ids = forms.ModelMultipleChoiceField(  
+    product_ids = forms.ModelMultipleChoiceField(
         queryset=Product.objects.filter(is_active=True),
         widget=forms.CheckboxSelectMultiple,
         required=True,
@@ -187,7 +186,7 @@ class ProductBulkDeleteForm(forms.Form):
 
 
 class ProductBulkUpdateForm(forms.Form):
-    product_ids = forms.ModelMultipleChoiceField( 
+    product_ids = forms.ModelMultipleChoiceField(
         queryset=Product.objects.filter(is_active=True),
         widget=forms.CheckboxSelectMultiple,
         required=True,

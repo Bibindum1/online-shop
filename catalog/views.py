@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 import json
 from django.db import transaction
 
+
 from .models import Category, Product
 from .forms import CategoryForm, ProductForm
 
@@ -30,7 +31,8 @@ def category_list(request):
 
     context = {
         'categories': page_obj,
-        'query': query
+        'query': query,
+        'show_dragdrop': request.user.is_authenticated
     }
     return render(request, 'catalog/categories/list.html', context)
 
@@ -94,6 +96,7 @@ def category_delete(request, pk):
         'products_count': category.products.count()
     }
     return render(request, 'catalog/categories/confirm_delete.html', context)
+
 
 def product_list(request):
     query = request.GET.get('q', '')
@@ -192,6 +195,7 @@ def product_delete(request, pk):
     }
     return render(request, 'catalog/products/confirm_delete.html', context)
 
+
 def category_check_slug(request):
     slug = request.GET.get('slug', '')
     exists = Category.objects.filter(slug=slug).exists()
@@ -224,6 +228,7 @@ class ProductDetailAdminView(LoginRequiredMixin, UserPassesTestMixin, DetailView
 
 @require_POST
 @csrf_exempt
+
 def reorder_products(request):
     if not request.user.is_admin and not request.user.groups.filter(name='admin').exists():
         return JsonResponse({'success': False, 'error': 'Нет прав доступа'})
@@ -242,10 +247,11 @@ def reorder_products(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-def reorder_categories(request):
-    if not request.user.is_admin and not request.user.groups.filter(name='admin').exists():
-        return JsonResponse({'success': False, 'error': 'Нет прав доступа'})
 
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def reorder_categories(request):
     try:
         data = json.loads(request.body)
         order = data.get('order', [])

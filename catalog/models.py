@@ -2,8 +2,10 @@ from django.db import models
 from django.utils.text import slugify
 import os
 
+
 def product_image_upload_path(instance, filename):
     return f'products/{instance.slug}/{filename}'
+
 
 class Category(models.Model):
     id = models.AutoField(primary_key=True)
@@ -25,12 +27,12 @@ class Category(models.Model):
             self.slug = slugify(self.name)[:200]
         super().save(*args, **kwargs)
 
-
     def __str__(self):
         return self.name
 
     def can_delete(self):
         return not self.products.exists()
+
 
 class Product(models.Model):
     id = models.AutoField(primary_key=True)
@@ -58,6 +60,7 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class ProductGallery(models.Model):
     product = models.ForeignKey(Product, related_name='gallery', on_delete=models.CASCADE)

@@ -18,9 +18,10 @@ class ProductGalleryInline(admin.TabularInline):
     extra = 1
     fields = ['image', 'alt_text', 'is_main']
 
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['name', 'category', 'price', 'is_active', 'created_at']
+    list_display = ['name', 'category', 'price', 'is_active', 'created_at', 'view_details']
     inlines = [ProductGalleryInline]
     list_filter = ['is_active', 'category', 'created_at']
     search_fields = ['name', 'description']
@@ -29,12 +30,10 @@ class ProductAdmin(admin.ModelAdmin):
     list_editable = ['price', 'is_active']
 
     def view_details(self, obj):
-        url = reverse('product_detail_admin', kwargs={'pk': obj.pk})
+        url = reverse('catalog:product_detail_admin', kwargs={'pk': obj.pk})
         return format_html(
             '<a class="button" href="{}">Детали</a>',
             url
         )
 
     view_details.short_description = 'Просмотр'
-
-

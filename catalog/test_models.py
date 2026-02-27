@@ -6,9 +6,11 @@ from PIL import Image
 from django.core.files.uploadedfile import SimpleUploadedFile
 from catalog.models import Category, Product
 
+
 @pytest.fixture
 def category():
     return Category.objects.create(name="Тестовая категория")
+
 
 @pytest.mark.django_db
 class TestCategoryModel:
@@ -38,6 +40,7 @@ class TestCategoryModel:
     def test_can_delete_with_products(self, category):
         Product.objects.create(name="Товар", category=category, price=100)
         assert category.can_delete() is False
+
 
 @pytest.mark.django_db
 class TestProductModel:

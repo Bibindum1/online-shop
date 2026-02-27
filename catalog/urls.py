@@ -16,10 +16,9 @@ urlpatterns = [
     path('products/<int:pk>/delete/', views.product_delete, name='product_delete'),
 
     path('products/<int:pk>/admin-detail/',
-        ProductDetailAdminView.as_view(),
-        name='product_detail_admin'),
+         ProductDetailAdminView.as_view(),
+         name='product_detail_admin'),
 
     path('products/reorder/', views.reorder_products, name='reorder_products'),
     path('categories/reorder/', views.reorder_categories, name='reorder_categories'),
-
 ]
