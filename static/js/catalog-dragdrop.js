@@ -114,7 +114,7 @@ function sendReorderRequest(url, order, type, csrfToken) {
     .catch(error => {
         console.error(`❌ Ошибка ${type}:`, error);
         showToast(`Ошибка сохранения ${type.toLowerCase()}`, 'danger');
-        setTimeout(() => location.reload(), 1500);
+        //setTimeout(() => location.reload(), 1500);
     });
 }
 
