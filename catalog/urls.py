@@ -1,10 +1,17 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 from .views import ProductDetailAdminView
 
 app_name = 'catalog'
 
 urlpatterns = [
+    path('', views.product_list, name='list'),
+    path('', views.product_list, name='index'),
+
+    path('public/', views.public_page, name='public_page'),
+    path('client/', views.client_page, name='client_page'),
+    path('manager/', views.manager_page, name='manager_page'),
+
     path('categories/', views.category_list, name='category_list'),
     path('categories/create/', views.category_create, name='category_create'),
     path('categories/<int:pk>/update/', views.category_update, name='category_update'),

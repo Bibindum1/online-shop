@@ -2,6 +2,7 @@ from django import forms
 from django.forms import ModelForm
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
+from ckeditor.widgets import CKEditorWidget  # ← ДОБАВЬТЕ
 from .models import Category, Product
 
 
@@ -13,6 +14,10 @@ class BaseProductMixin:
         self.fields = None
 
     def apply_styles(self):
+        # Пропускаем стили для description (CKEditor сам управляет)
+        if 'description' not in self.fields:
+            return
+
         self.fields['name'].widget.attrs.update({
             'class': 'form-control',
             'placeholder': 'Название товара',
@@ -23,11 +28,7 @@ class BaseProductMixin:
             'class': 'form-select',
             'required': True
         })
-        self.fields['description'].widget.attrs.update({
-            'class': 'form-control',
-            'rows': 5,
-            'placeholder': 'Подробное описание товара...'
-        })
+        # description уже CKEditor - стили не нужны
         self.fields['price'].widget.attrs.update({
             'class': 'form-control',
             'type': 'number',
@@ -57,17 +58,17 @@ class BaseCategoryMixin:
         abstract = True
 
     def apply_styles(self):
+        # Пропускаем стили для description (CKEditor сам управляет)
+        if 'description' not in self.fields:
+            return
+
         self.fields['name'].widget.attrs.update({
             'class': 'form-control',
             'placeholder': 'Введите название категории',
             'maxlength': 200,
             'required': True
         })
-        self.fields['description'].widget.attrs.update({
-            'class': 'form-control',
-            'rows': 4,
-            'placeholder': 'Краткое описание категории...'
-        })
+        # description уже CKEditor - стили не нужны
         self.fields['is_active'].widget.attrs.update({
             'class': 'form-check-input'
         })
@@ -77,6 +78,9 @@ class CategoryForm(ModelForm, BaseCategoryMixin):
     class Meta:
         model = Category
         fields = ['name', 'description', 'is_active']
+        widgets = {  # ← ДОБАВЬТЕ ЭТО
+            'description': CKEditorWidget(config_name='default'),
+        }
         labels = {
             'name': 'Название категории',
             'description': 'Описание',
@@ -102,6 +106,9 @@ class ProductForm(ModelForm, BaseProductMixin):
     class Meta:
         model = Product
         fields = ['name', 'category', 'description', 'price', 'stock', 'is_active', 'image']
+        widgets = {  # ← ДОБАВЬТЕ ЭТО
+            'description': CKEditorWidget(config_name='default'),
+        }
         labels = {
             'name': 'Название товара',
             'category': 'Категория',
@@ -124,6 +131,7 @@ class ProductForm(ModelForm, BaseProductMixin):
         if self.instance.pk and self.instance.category:
             self.fields['category'].queryset |= Category.objects.filter(pk=self.instance.category.pk)
 
+    # остальные clean_ методы остаются без изменений
     def clean_name(self):
         name = self.cleaned_data['name']
         if len(name) < 2:
@@ -153,51 +161,3 @@ class ProductForm(ModelForm, BaseProductMixin):
             elif hasattr(image, 'size') and image.size > 5 * 1024 * 1024:
                 raise ValidationError('Размер изображения не должен превышать 5MB')
         return image
-
-
-class ProductSearchForm(forms.Form):
-    query = forms.CharField(
-        max_length=255,
-        required=False,
-        label='Поиск по названию или описанию',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Введите название или описание...'
-        })
-    )
-
-
-class CategoryBulkDeleteForm(forms.Form):
-    category_ids = forms.ModelMultipleChoiceField(
-        queryset=Category.objects.filter(is_active=True),
-        widget=forms.CheckboxSelectMultiple,
-        required=True,
-        label='Выберите категории для удаления'
-    )
-
-
-class ProductBulkDeleteForm(forms.Form):
-    product_ids = forms.ModelMultipleChoiceField(
-        queryset=Product.objects.filter(is_active=True),
-        widget=forms.CheckboxSelectMultiple,
-        required=True,
-        label='Выберите товары для удаления'
-    )
-
-
-class ProductBulkUpdateForm(forms.Form):
-    product_ids = forms.ModelMultipleChoiceField(
-        queryset=Product.objects.filter(is_active=True),
-        widget=forms.CheckboxSelectMultiple,
-        required=True,
-        label='Выберите товары для обновления'
-    )
-
-
-class CategoryBulkUpdateForm(forms.Form):
-    category_ids = forms.ModelMultipleChoiceField(
-        queryset=Category.objects.filter(is_active=True),
-        widget=forms.CheckboxSelectMultiple,
-        required=True,
-        label='Выберите категории для обновления'
-    )

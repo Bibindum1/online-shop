@@ -1,4 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required  # ← ИСПРАВЛЕНО!
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q
@@ -7,9 +9,8 @@ from django.http import JsonResponse
 from django.views.generic import DetailView
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-import json
 from django.db import transaction
-
+import json
 
 from .models import Category, Product
 from .forms import CategoryForm, ProductForm
@@ -35,6 +36,72 @@ def category_list(request):
         'show_dragdrop': request.user.is_authenticated
     }
     return render(request, 'catalog/categories/list.html', context)
+
+
+def product_list(request):
+    query = request.GET.get('q', '')
+    category_id = request.GET.get('category', '')
+    sort = request.GET.get('sort', 'name')
+
+    products = Product.objects.select_related('category').all()
+
+    if query:
+        products = products.filter(
+            Q(name__icontains=query) |
+            Q(description__icontains=query)
+        )
+    if category_id:
+        products = products.filter(category_id=category_id)
+
+    sort_options = {
+        'name': 'name',
+        'price': 'price',
+        'price_desc': '-price',
+        'created_at': '-created_at',
+        'stock': 'stock'
+    }
+    products = products.order_by(sort_options.get(sort, 'name'))
+
+    paginator = Paginator(products, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    categories = Category.objects.filter(is_active=True)
+
+    context = {
+        'products': page_obj,
+        'categories': categories,
+        'query': query,
+        'category_id': category_id,
+        'sort': sort,
+        'total_count': products.count(),
+        'show_dragdrop': request.user.is_authenticated
+    }
+    return render(request, 'catalog/products/list.html', context)
+
+
+# НОВЫЕ ЗАЩИЩЕННЫЕ СТРАНИЦЫ
+def public_page(request):
+    """Публичная страница - доступна всем"""
+    return render(request, 'catalog/public.html', {
+        'title': 'Публичная страница'
+    })
+
+
+@login_required
+def client_page(request):
+    """Страница клиента - только авторизованным"""
+    return render(request, 'catalog/client.html', {
+        'title': 'Страница клиента'
+    })
+
+
+@staff_member_required
+def manager_page(request):
+    """Страница менеджера - только staff"""
+    return render(request, 'catalog/manager.html', {
+        'title': 'Страница менеджера'
+    })
 
 
 def category_create(request):
@@ -85,7 +152,7 @@ def category_delete(request, pk):
         if category.products.exists():
             messages.error(request,
                            f'Нельзя удалить категорию "{category.name}". '
-                           f'В ней {category.product_set.count()} товаров')
+                           f'В ней {category.products.count()} товаров')
         else:
             category.delete()
             messages.success(request, 'Категория успешно удалена')
@@ -96,48 +163,6 @@ def category_delete(request, pk):
         'products_count': category.products.count()
     }
     return render(request, 'catalog/categories/confirm_delete.html', context)
-
-
-def product_list(request):
-    query = request.GET.get('q', '')
-    category_id = request.GET.get('category', '')
-    sort = request.GET.get('sort', 'name')
-
-    products = Product.objects.select_related('category').all()
-
-    if query:
-        products = products.filter(
-            Q(name__icontains=query) |
-            Q(description__icontains=query)
-        )
-    if category_id:
-        products = products.filter(category_id=category_id)
-
-    sort_options = {
-        'name': 'name',
-        'price': 'price',
-        'price_desc': '-price',
-        'created_at': '-created_at',
-        'stock': 'stock'
-    }
-    products = products.order_by(sort_options.get(sort, 'name'))
-
-    paginator = Paginator(products, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    categories = Category.objects.filter(is_active=True)
-
-    context = {
-        'products': page_obj,
-        'categories': categories,
-        'query': query,
-        'category_id': category_id,
-        'sort': sort,
-        'total_count': products.count(),
-        'is_admin': request.user.is_superuser or request.user.groups.filter(name='admin').exists()
-    }
-    return render(request, 'catalog/products/list.html', context)
 
 
 def product_create(request):
@@ -164,12 +189,12 @@ def product_update(request, pk):
 
     if request.method == 'POST':
         form = ProductForm(request.POST, request.FILES, instance=product)
-        if not form.is_valid():
-            messages.error(request, 'Исправьте ошибки в форме')
-        else:
+        if form.is_valid():
             form.save()
             messages.success(request, 'Товар успешно обновлен')
             return redirect('catalog:product_list')
+        else:
+            messages.error(request, 'Исправьте ошибки в форме')
     else:
         form = ProductForm(instance=product)
 
@@ -196,18 +221,6 @@ def product_delete(request, pk):
     return render(request, 'catalog/products/confirm_delete.html', context)
 
 
-def category_check_slug(request):
-    slug = request.GET.get('slug', '')
-    exists = Category.objects.filter(slug=slug).exists()
-    return JsonResponse({'exists': exists})
-
-
-def product_check_slug(request):
-    slug = request.GET.get('slug', '')
-    exists = Product.objects.filter(slug=slug).exists()
-    return JsonResponse({'exists': exists})
-
-
 class ProductDetailAdminView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = Product
     template_name = 'catalog/products/product_detail_admin.html'
@@ -220,48 +233,60 @@ class ProductDetailAdminView(LoginRequiredMixin, UserPassesTestMixin, DetailView
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['gallery'] = self.object.gallery.all()  # ← ГАЛЕРЕЯ!
+        context['gallery'] = self.object.gallery.all()
         context['main_image'] = self.object.gallery.filter(is_main=True).first()
         context['is_admin'] = True
         return context
 
 
-@require_POST
-@csrf_exempt
-
-def reorder_products(request):
-    if not request.user.is_admin and not request.user.groups.filter(name='admin').exists():
-        return JsonResponse({'success': False, 'error': 'Нет прав доступа'})
-
-    try:
-        data = json.loads(request.body)
-        order = data.get('order', [])
-
-        with transaction.atomic():
-            for i, product_id in enumerate(order):
-                product = Product.objects.get(id=product_id)
-                product.position = i + 1
-                product.save(update_fields=['position'])
-
-        return JsonResponse({'success': True})
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+# AJAX проверки
+def category_check_slug(request):
+    slug = request.GET.get('slug', '')
+    exists = Category.objects.filter(slug=slug).exists()
+    return JsonResponse({'exists': exists})
 
 
-from django.contrib.auth.decorators import login_required
+def product_check_slug(request):
+    slug = request.GET.get('slug', '')
+    exists = Product.objects.filter(slug=slug).exists()
+    return JsonResponse({'exists': exists})
+
 
 @login_required
+@require_POST
+@csrf_exempt
 def reorder_categories(request):
     try:
         data = json.loads(request.body)
         order = data.get('order', [])
 
+        if not order:
+            return JsonResponse({'success': False, 'error': 'Пустой список'})
+
         with transaction.atomic():
             for i, category_id in enumerate(order):
-                category = Category.objects.get(id=category_id)
-                category.position = i + 1
-                category.save(update_fields=['position'])
+                Category.objects.filter(id=category_id).update(position=i)
 
-        return JsonResponse({'success': True})
+        return JsonResponse({'success': True, 'message': f'Переупорядочено {len(order)} категорий'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+@require_POST
+@csrf_exempt
+def reorder_products(request):
+    try:
+        data = json.loads(request.body)
+        order = data.get('order', [])
+
+        if not order:
+            return JsonResponse({'success': False, 'error': 'Пустой список'})
+
+        with transaction.atomic():
+            for i, product_id in enumerate(order):
+                Product.objects.filter(id=product_id).update(position=i)
+
+        return JsonResponse({'success': True, 'message': f'Переупорядочено {len(order)} товаров'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})

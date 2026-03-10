@@ -10,10 +10,40 @@
 <body>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
-        <a class="navbar-brand" href="{% url 'catalog:category_list' %}">
+        <a class="navbar-brand" href="{% url 'catalog:index' %}">
             <i class="bi bi-shop"></i> Каталог
         </a>
-        <div class="navbar-nav">
+        <div class="navbar-nav ms-auto">
+            <!-- Админка только для staff -->
+            {% if user.is_staff %}
+                <a class="nav-link" href="/admin/">
+                    <i class="bi bi-gear"></i> Админка
+                </a>
+            {% endif %}
+
+            <!-- Публичная страница -->
+            <a class="nav-link" href="{% url 'catalog:public_page' %}">
+                📄 Публичная
+            </a>
+
+            <!-- Клиентская страница -->
+            {% if user.is_authenticated %}
+                <a class="nav-link" href="{% url 'catalog:client_page' %}">
+                    👤 {{ user.username }}
+                </a>
+            {% else %}
+                <a class="nav-link" href="/admin/login/?next=/catalog/client/">
+                    🔐 Войти
+                </a>
+            {% endif %}
+
+            <!-- Менеджерская страница -->
+            {% if user.is_staff %}
+                <a class="nav-link" href="{% url 'catalog:manager_page' %}">
+                    ⚙️ Менеджер
+                </a>
+            {% endif %}
+
             <a class="nav-link" href="{% url 'catalog:category_list' %}">Категории</a>
             <a class="nav-link" href="{% url 'catalog:product_list' %}">Товары</a>
         </div>
@@ -21,6 +51,23 @@
 </nav>
 
 <div class="container mt-4">
+    <!-- Статус пользователя -->
+    {% if user.is_authenticated %}
+        <div class="alert alert-info d-flex justify-content-between align-items-center">
+            <div>
+                <strong>👤 {{ user.username }}</strong>
+                ({{ user.email }})
+                {% if user.is_staff %}
+                    <span class="badge bg-success ms-2">МЕНЕДЖЕР</span>
+                {% endif %}
+            </div>
+            <div>
+                <a href="/admin/password_change/" class="btn btn-sm btn-outline-primary me-2">🔑 Пароль</a>
+                <a href="/admin/logout/" class="btn btn-sm btn-outline-danger">🚪 Выход</a>
+            </div>
+        </div>
+    {% endif %}
+
     {% if messages %}
         {% for message in messages %}
             <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">

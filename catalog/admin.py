@@ -1,11 +1,32 @@
 from django.contrib import admin
 from django.urls import reverse
 from django.utils.html import format_html
+from django import forms
+from ckeditor_uploader.widgets import CKEditorUploadingWidget
 from .models import Category, Product, ProductGallery
+
+
+class CategoryAdminForm(forms.ModelForm):
+    class Meta:
+        model = Category
+        fields = '__all__'
+        widgets = {
+            'description': CKEditorUploadingWidget(),
+        }
+
+
+class ProductAdminForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        fields = '__all__'
+        widgets = {
+            'description': CKEditorUploadingWidget(),
+        }
 
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
+    form = CategoryAdminForm
     list_display = ['name', 'slug', 'is_active', 'created_at']
     list_filter = ['is_active', 'created_at']
     search_fields = ['name', 'description']
@@ -21,6 +42,7 @@ class ProductGalleryInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    form = ProductAdminForm
     list_display = ['name', 'category', 'price', 'is_active', 'created_at', 'view_details']
     inlines = [ProductGalleryInline]
     list_filter = ['is_active', 'category', 'created_at']
@@ -35,5 +57,4 @@ class ProductAdmin(admin.ModelAdmin):
             '<a class="button" href="{}">Детали</a>',
             url
         )
-
     view_details.short_description = 'Просмотр'

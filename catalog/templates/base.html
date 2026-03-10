@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Главное меню</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f9f9f9; }
+        .menu { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .menu h1 { color: #333; margin-bottom: 30px; }
+        .menu a {
+            display: inline-block;
+            margin: 8px;
+            padding: 12px 24px;
+            background: #007cba;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .menu a:hover { background: #005a87; transform: translateY(-2px); }
+        .staff-only { background: #28a745 !important; }
+        .client-only { background: #17a2b8 !important; }
+        .login-info {
+            margin-top: 25px;
+            padding: 20px;
+            background: #e7f3ff;
+            border-radius: 8px;
+            border-left: 5px solid #007cba;
+        }
+        .user-status { font-weight: bold; color: #007cba; }
+    </style>
+</head>
+<body>
+    <div class="menu">
+        <h1>🚀 Главное меню</h1>
+
+        <!-- Админка ТОЛЬКО для менеджеров (is_staff=True) -->
+        {% if user.is_staff %}
+            <a href="/admin/" class="staff-only">🔧 Админ-панель</a>
+        {% endif %}
+
+        <!-- Публичная - ВСЕМ -->
+        <a href="{% url 'catalog:public_page' %}">📄 Публичная</a>
+
+        <!-- Клиентская - только авторизованным -->
+        {% if user.is_authenticated %}
+            <a href="{% url 'catalog:client_page' %}" class="client-only">👤 Клиент</a>
+        {% else %}
+            <a href="/admin/login/?next=/catalog/client/">🔐 Войти</a>
+        {% endif %}
+
+        <!-- Менеджерская - только staff -->
+        {% if user.is_staff %}
+            <a href="{% url 'catalog:manager_page' %}">⚙️ Менеджер</a>
+        {% endif %}
+
+        <a href="{% url 'catalog:product_list' %}">🛒 Каталог товаров</a>
+        <a href="{% url 'catalog:category_list' %}">📂 Категории</a>
+    </div>
+
+    <div class="login-info">
+        <strong>👤 Текущий пользователь:</strong>
+        {% if user.is_authenticated %}
+            <span class="user-status">{{ user.username }}</span>
+            ({{ user.email }})
+            {% if user.is_staff %}<span style="color:#28a745;">[МЕНЕДЖЕР]</span>{% endif %}
+            | <a href="/admin/password_change/">🔑 Смена пароля</a>
+            | <a href="/admin/logout/">🚪 Выход</a>
+        {% else %}
+            <span style="color:#999;">Гость (не авторизован)</span>
+        {% endif %}
+    </div>
+</body>
+</html>
+
+
