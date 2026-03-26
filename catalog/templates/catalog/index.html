@@ -62,8 +62,10 @@
                 {% endif %}
             </div>
             <div>
-                <a href="/admin/password_change/" class="btn btn-sm btn-outline-primary me-2">🔑 Пароль</a>
-                <a href="/admin/logout/" class="btn btn-sm btn-outline-danger">🚪 Выход</a>
+                {% if user.is_staff %}
+                    <a href="/admin/password_change/" class="btn btn-sm btn-outline-primary me-2">🔑 Пароль (админ)</a>
+                {% endif %}
+                <a href="{% url 'catalog:user_logout' %}" class="btn btn-sm btn-outline-danger">🚪 Выход</a>
             </div>
         </div>
     {% endif %}

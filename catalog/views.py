@@ -1,21 +1,28 @@
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.contrib.auth.decorators import login_required
-from django.contrib.admin.views.decorators import staff_member_required  # ← ИСПРАВЛЕНО!
+from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db.models import Q
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.views.generic import DetailView
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.db import transaction
 import json
-
+from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required
+from django.utils.text import slugify
+from django.views.decorators.csrf import csrf_exempt
 from .models import Category, Product
 from .forms import CategoryForm, ProductForm
 
 
+
+@csrf_exempt
+@login_required
+def user_logout(request):
+    logout(request)
+    return redirect('catalog:index')
 def category_list(request):
     query = request.GET.get('q', '')
     categories = Category.objects.all()
@@ -80,17 +87,17 @@ def product_list(request):
     return render(request, 'catalog/products/list.html', context)
 
 
-# НОВЫЕ ЗАЩИЩЕННЫЕ СТРАНИЦЫ
 def public_page(request):
-    """Публичная страница - доступна всем"""
+    products = Product.objects.all()
+
     return render(request, 'catalog/public.html', {
-        'title': 'Публичная страница'
+        'title': 'Публичная страница',
+        'products': products,
     })
 
 
 @login_required
 def client_page(request):
-    """Страница клиента - только авторизованным"""
     return render(request, 'catalog/client.html', {
         'title': 'Страница клиента'
     })
@@ -98,7 +105,6 @@ def client_page(request):
 
 @staff_member_required
 def manager_page(request):
-    """Страница менеджера - только staff"""
     return render(request, 'catalog/manager.html', {
         'title': 'Страница менеджера'
     })
